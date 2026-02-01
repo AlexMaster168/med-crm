@@ -1,0 +1,14 @@
+<nav *ngIf="currentUser$ | async as user">
+  <a routerLink="/">Главная</a>
+  <a *ngIf="user.role === UserRole.PATIENT" routerLink="/patient/appointments">Мои записи</a>
+  <a *ngIf="user.role === UserRole.PATIENT" routerLink="/patient/medical-card">Медкарта</a>
+  <a *ngIf="user.role === UserRole.PATIENT" routerLink="/patient/doctors">Врачи</a>
+  <a *ngIf="user.role === UserRole.PATIENT" routerLink="/patient/family-doctor">Семейный врач</a>
+  <a *ngIf="user.role === UserRole.DOCTOR" routerLink="/doctor/appointments">Записи пациентов</a>
+  <a *ngIf="user.role === UserRole.DOCTOR" routerLink="/doctor/patients">Мои пациенты</a>
+  <button class="btn btn-danger" (click)="logout()">Выход</button>
+</nav>
+
+<div class="container">
+  <router-outlet></router-outlet>
+</div>

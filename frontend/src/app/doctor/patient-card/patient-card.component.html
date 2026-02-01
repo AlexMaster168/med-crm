@@ -1,0 +1,50 @@
+<div class="card" *ngIf="medicalCard">
+  <h2>Медицинская карта пациента</h2>
+  
+  <div class="info-section">
+    <h3>Общая информация</h3>
+    <p><strong>Группа крови:</strong> {{ medicalCard.bloodType || 'Не указано' }}</p>
+    <p><strong>Рост:</strong> {{ medicalCard.height || 'Не указано' }} см</p>
+    <p><strong>Вес:</strong> {{ medicalCard.weight || 'Не указано' }} кг</p>
+    <p><strong>Аллергии:</strong> {{ medicalCard.allergies?.join(', ') || 'Нет' }}</p>
+    <p><strong>Хронические заболевания:</strong> {{ medicalCard.chronicDiseases?.join(', ') || 'Нет' }}</p>
+  </div>
+
+  <button class="btn btn-primary" (click)="showAddRecord = !showAddRecord">
+    {{ showAddRecord ? 'Отменить' : 'Добавить запись' }}
+  </button>
+
+  <div class="add-record-form" *ngIf="showAddRecord">
+    <h3>Новая запись</h3>
+    <div class="form-group">
+      <label>Симптомы</label>
+      <textarea [(ngModel)]="newRecord.symptoms" required></textarea>
+    </div>
+    <div class="form-group">
+      <label>Диагноз</label>
+      <input type="text" [(ngModel)]="newRecord.diagnosis" required>
+    </div>
+    <div class="form-group">
+      <label>Лечение</label>
+      <textarea [(ngModel)]="newRecord.treatment"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Примечания</label>
+      <textarea [(ngModel)]="newRecord.notes"></textarea>
+    </div>
+    <button class="btn btn-primary" (click)="addRecord()">Сохранить</button>
+  </div>
+
+  <div class="records-section">
+    <h3>История посещений</h3>
+    <div *ngFor="let record of medicalCard.records" class="record-item">
+      <p><strong>Дата:</strong> {{ record.date | date:'dd.MM.yyyy' }}</p>
+      <p><strong>Врач:</strong> {{ (record.doctorId as any).firstName }} {{ (record.doctorId as any).lastName }}</p>
+      <p><strong>Симптомы:</strong> {{ record.symptoms }}</p>
+      <p><strong>Диагноз:</strong> {{ record.diagnosis }}</p>
+      <p *ngIf="record.treatment"><strong>Лечение:</strong> {{ record.treatment }}</p>
+      <p *ngIf="record.notes"><strong>Примечания:</strong> {{ record.notes }}</p>
+    </div>
+    <p *ngIf="medicalCard.records.length === 0">История посещений пуста</p>
+  </div>
+</div>

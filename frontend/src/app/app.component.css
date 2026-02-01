@@ -1,0 +1,13 @@
+nav {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+nav a {
+  padding: 10px 15px;
+}
+
+nav button {
+  margin-left: auto;
+}

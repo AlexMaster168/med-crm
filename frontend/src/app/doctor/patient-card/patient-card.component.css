@@ -1,0 +1,17 @@
+.info-section, .records-section, .add-record-form {
+  margin: 20px 0;
+}
+
+.record-item {
+  padding: 15px;
+  margin: 10px 0;
+  background-color: #f8f9fa;
+  border-left: 4px solid #007bff;
+  border-radius: 4px;
+}
+
+.add-record-form {
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}

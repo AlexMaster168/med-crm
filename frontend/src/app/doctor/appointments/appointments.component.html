@@ -1,0 +1,34 @@
+<div class="card">
+  <h2>Записи пациентов</h2>
+  <table *ngIf="appointments.length > 0">
+    <thead>
+      <tr>
+        <th>Дата и время</th>
+        <th>Пациент</th>
+        <th>Телефон</th>
+        <th>Причина</th>
+        <th>Статус</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let appointment of appointments">
+        <td>{{ appointment.dateTime | date:'dd.MM.yyyy HH:mm' }}</td>
+        <td>{{ (appointment.patientId as any).firstName }} {{ (appointment.patientId as any).lastName }}</td>
+        <td>{{ (appointment.patientId as any).phone }}</td>
+        <td>{{ appointment.reason }}</td>
+        <td>{{ appointment.status }}</td>
+        <td>
+          <button class="btn btn-primary" (click)="completeAppointment(appointment._id)"
+                  *ngIf="appointment.status === 'scheduled'">
+            Завершить
+          </button>
+          <a [routerLink]="['/doctor/patient', (appointment.patientId as any)._id]" class="btn btn-primary">
+            Медкарта
+          </a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p *ngIf="appointments.length === 0">Нет записей</p>
+</div>

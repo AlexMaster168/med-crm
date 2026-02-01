@@ -1,0 +1,24 @@
+<div class="card">
+  <h2>Семейный врач</h2>
+
+  <div *ngIf="familyDoctor">
+    <h3>{{ familyDoctor.doctorId.firstName }} {{ familyDoctor.doctorId.lastName }}</h3>
+    <p><strong>Специализация:</strong> {{ familyDoctor.doctorId.specialization }}</p>
+    <p><strong>Телефон:</strong> {{ familyDoctor.doctorId.phone }}</p>
+    <p><strong>Дата заключения договора:</strong> {{ familyDoctor.contractDate | date:'dd.MM.yyyy' }}</p>
+    <button class="btn btn-danger" (click)="terminateContract()">Расторгнуть договор</button>
+  </div>
+
+  <div *ngIf="!familyDoctor && !showTherapists">
+    <p>У вас нет семейного врача</p>
+    <button class="btn btn-primary" (click)="loadTherapists()">Выбрать терапевта</button>
+  </div>
+
+  <div *ngIf="showTherapists" class="therapists-list">
+    <h3>Выберите терапевта</h3>
+    <div *ngFor="let therapist of therapists" class="therapist-card" (click)="selectTherapist(therapist._id)">
+      <h4>{{ therapist.firstName }} {{ therapist.lastName }}</h4>
+      <p>{{ therapist.specialization }}</p>
+    </div>
+  </div>
+</div>
