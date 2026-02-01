@@ -522,9 +522,23 @@ export class PatientDashboardComponent implements OnInit {
     }
 
     loadAppointments(): void {
-        this.appointmentService.getAppointments().subscribe({
-            next: (data) => {
+        this.appointmentService.getPatientAppointments().subscribe({
+            next: (data: any[]) => {
                 this.appointments = data;
+            },
+            error: (err) => {
+                console.error(err);
+            }
+        });
+    }
+
+    loadAvailableSlots(doctorId: string, date: string): void {
+        this.appointmentService.getAvailableSlots(doctorId, date).subscribe({
+            next: (data: any) => {
+                this.availableSlots = data;
+            },
+            error: (err) => {
+                console.error(err);
             }
         });
     }

@@ -344,9 +344,12 @@ export class DoctorDashboardComponent implements OnInit {
     }
 
     loadAppointments(): void {
-        this.appointmentService.getAppointments().subscribe({
-            next: (data) => {
-                this.appointments = data.filter(apt => apt.status === 'scheduled');
+        this.appointmentService.getDoctorAppointments().subscribe({
+            next: (data: any[]) => {
+                this.appointments = data.filter((apt: any) => apt.status === 'scheduled');
+            },
+            error: (err) => {
+                console.error(err);
             }
         });
     }

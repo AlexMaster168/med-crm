@@ -3,6 +3,7 @@ import {CommonModule} from '@angular/common';
 import {FormBuilder, FormGroup, Validators, ReactiveFormsModule} from '@angular/forms';
 import {Router, RouterModule} from '@angular/router';
 import {AuthService} from '../../services/auth.service';
+import {UserRole} from "../../models/user.model";
 
 @Component({
     selector: 'app-login',
@@ -175,8 +176,9 @@ export class LoginComponent {
             const {email, password} = this.loginForm.value;
             this.authService.login(email, password).subscribe({
                 next: (response) => {
+                    const role = response.user?.role || response.role;
                     this.loading = false;
-                    if (response.user.role === 'doctor') {
+                    if (role === UserRole.DOCTOR) {
                         this.router.navigate(['/doctor']);
                     } else {
                         this.router.navigate(['/patient']);

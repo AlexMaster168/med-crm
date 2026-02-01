@@ -1,23 +1,36 @@
-import { Injectable } from '@angular/core';
-import { Router, CanActivate, ActivatedRouteSnapshot } from '@angular/router';
-import { AuthService } from '../services/auth.service';
-import { UserRole } from '../models/user.model';
+import {Injectable} from '@angular/core';
+import {Router, CanActivate, ActivatedRouteSnapshot, UrlTree} from '@angular/router';
+import {AuthService} from '../services/auth.service';
 
 @Injectable({
-  providedIn: 'root'
+    providedIn: 'root'
 })
 export class RoleGuard implements CanActivate {
-  constructor(private authService: AuthService, private router: Router) {}
-
-  canActivate(route: ActivatedRouteSnapshot): boolean {
-    const user = this.authService.getCurrentUser();
-    const requiredRole = route.data['role'] as UserRole;
-
-    if (user && user.role === requiredRole) {
-      return true;
+    constructor(
+        private authService: AuthService,
+        private router: Router
+    ) {
     }
 
-    this.router.navigate(['/']);
-    return false;
-  }
+    canActivate(route: ActivatedRouteSnapshot): boolean | UrlTree {
+        if (!this.authService.isAuthenticated()) {
+            return this.router.createUrlTree(['/login']);
+        }
+
+        const expectedRole = route.data['role'];
+
+        const userRole = this.authService.getUserRole();
+
+        if (userRole === expectedRole) {
+            return true;
+        }
+
+        if (userRole === 'doctor') {
+            return this.router.createUrlTree(['/doctor/appointments']);
+        } else if (userRole === 'patient') {
+            return this.router.createUrlTree(['/patient/appointments']);
+        }
+
+        return this.router.createUrlTree(['/login']);
+    }
 }

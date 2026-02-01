@@ -1,43 +1,41 @@
 import {Injectable} from '@angular/core';
-import {HttpClient, HttpParams} from '@angular/common/http';
+import {HttpClient} from '@angular/common/http';
 import {Observable} from 'rxjs';
-import {Appointment} from '../models/appointment.model';
-import {User} from '../models/user.model';
-import {environment} from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
-export class AppointmentsService {
+export class AppointmentService {
+    private apiUrl = `http://localhost:3000/appointments`;
+
     constructor(private http: HttpClient) {
     }
 
-    create(data: any): Observable<Appointment> {
-        return this.http.post<Appointment>(`${environment.apiUrl}/appointments`, data);
+    getPatientAppointments(): Observable<any> {
+        return this.http.get(`${this.apiUrl}/my`);
     }
 
-    getMyAppointments(): Observable<Appointment[]> {
-        return this.http.get<Appointment[]>(`${environment.apiUrl}/appointments/my`);
+    getDoctorAppointments(): Observable<any> {
+        return this.http.get(`${this.apiUrl}/doctor`);
     }
 
-    getDoctorAppointments(): Observable<Appointment[]> {
-        return this.http.get<Appointment[]>(`${environment.apiUrl}/appointments/doctor`);
+    getMyPatients(): Observable<any> {
+        return this.http.get(`${this.apiUrl}/patients`);
     }
 
-    getAvailableDoctors(specialization?: string): Observable<User[]> {
-        let params = new HttpParams();
-        if (specialization) {
-            params = params.append('specialization', specialization);
-        }
-
-        return this.http.get<User[]>(`${environment.apiUrl}/appointments/doctors`, {params});
+    getAvailableSlots(doctorId: string, date: string): Observable<any> {
+        return this.http.get(`${this.apiUrl}/doctor`, {params: {doctorId, date}});
     }
 
-    update(id: string, data: any): Observable<Appointment> {
-        return this.http.patch<Appointment>(`${environment.apiUrl}/appointments/${id}`, data);
+    createAppointment(data: any): Observable<any> {
+        return this.http.post(this.apiUrl, data);
     }
 
-    delete(id: string): Observable<any> {
-        return this.http.delete(`${environment.apiUrl}/appointments/${id}`);
+    updateAppointment(id: string, data: any): Observable<any> {
+        return this.http.patch(`${this.apiUrl}/${id}`, data);
+    }
+
+    cancelAppointment(id: string): Observable<any> {
+        return this.http.delete(`${this.apiUrl}/${id}`);
     }
 }
