@@ -2,6 +2,9 @@
 /dist
 /node_modules
 /build
+/.angular
+/package-lock.json
+/yarn.lock
 
 # Logs
 logs

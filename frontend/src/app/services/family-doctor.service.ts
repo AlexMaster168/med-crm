@@ -1,27 +1,28 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+
 import { environment } from '../../environments/environment';
+import { User } from '../models/user.model';
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class FamilyDoctorService {
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  private readonly api = `${environment.apiUrl}/family-doctors`;
 
-  createContract(doctorId: string): Observable<any> {
-    return this.http.post(`${environment.apiUrl}/family-doctors`, { doctorId });
+  assign(doctorId: string): Observable<unknown> {
+    return this.http.post(this.api, { doctorId });
   }
 
-  getMyDoctor(): Observable<any> {
-    return this.http.get(`${environment.apiUrl}/family-doctors/my`);
+  getMyDoctor(): Observable<User | null> {
+    return this.http.get<User | null>(`${this.api}/my`);
   }
 
-  getMyPatients(): Observable<any[]> {
-    return this.http.get<any[]>(`${environment.apiUrl}/family-doctors/patients`);
+  getMyPatients(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.api}/patients`);
   }
 
-  terminateContract(): Observable<any> {
-    return this.http.delete(`${environment.apiUrl}/family-doctors`);
+  terminate(): Observable<unknown> {
+    return this.http.delete(this.api);
   }
 }

@@ -1,48 +1,55 @@
-import {Injectable, NotFoundException, BadRequestException} from '@nestjs/common';
-import {InjectModel} from '@nestjs/mongoose';
-import {Model, Types} from 'mongoose';
-import {Appointment, AppointmentDocument, AppointmentStatus} from '../schemas/appointment.schema';
-import {User, UserDocument, UserRole} from '../schemas/user.schema';
-import {CreateAppointmentDto, UpdateAppointmentDto} from '../dto/appointment.dto';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model, Types } from 'mongoose';
+import {
+    Appointment,
+    AppointmentDocument,
+    AppointmentStatus,
+} from '../schemas/appointment.schema';
+import { User, UserDocument, UserRole } from '../schemas/user.schema';
+import { CreateAppointmentDto, UpdateAppointmentDto } from '../dto/appointment.dto';
 
 @Injectable()
 export class AppointmentsService {
     constructor(
-        @InjectModel(Appointment.name) private appointmentModel: Model<AppointmentDocument>,
-        @InjectModel(User.name) private userModel: Model<UserDocument>,
-    ) {
-    }
+        @InjectModel(Appointment.name)
+        private readonly appointmentModel: Model<AppointmentDocument>,
+        @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    ) {}
 
-    async create(patientId: string, createAppointmentDto: CreateAppointmentDto) {
-        const doctor = await this.userModel.findById(createAppointmentDto.doctorId);
+    async create(patientId: string, dto: CreateAppointmentDto) {
+        const doctor = await this.userModel.findById(dto.doctorId);
         if (!doctor || doctor.role !== UserRole.DOCTOR) {
             throw new NotFoundException('Врач не найден');
         }
 
-        const appointment = new this.appointmentModel({
+        const dateTime = new Date(dto.dateTime);
+        if (dateTime.getTime() <= Date.now()) {
+            throw new ForbiddenException('Время приема должно быть в будущем');
+        }
+
+        return this.appointmentModel.create({
             patientId: new Types.ObjectId(patientId),
-            doctorId: new Types.ObjectId(createAppointmentDto.doctorId),
-            dateTime: new Date(createAppointmentDto.dateTime),
-            reason: createAppointmentDto.reason,
+            doctorId: new Types.ObjectId(dto.doctorId),
+            dateTime,
+            reason: dto.reason,
             status: AppointmentStatus.SCHEDULED,
         });
-
-        return appointment.save();
     }
 
-    async findAllByPatient(patientId: string) {
+    findAllByPatient(patientId: string) {
         return this.appointmentModel
-            .find({patientId: new Types.ObjectId(patientId)})
+            .find({ patientId: new Types.ObjectId(patientId) })
             .populate('doctorId', 'firstName lastName specialization')
-            .sort({dateTime: -1})
+            .sort({ dateTime: -1 })
             .exec();
     }
 
-    async findAllByDoctor(doctorId: string) {
+    findAllByDoctor(doctorId: string) {
         return this.appointmentModel
-            .find({doctorId: new Types.ObjectId(doctorId)})
+            .find({ doctorId: new Types.ObjectId(doctorId) })
             .populate('patientId', 'firstName lastName phone')
-            .sort({dateTime: 1})
+            .sort({ dateTime: 1 })
             .exec();
     }
 
@@ -57,80 +64,74 @@ export class AppointmentsService {
             throw new NotFoundException('Запись не найдена');
         }
 
-        if (userRole === UserRole.PATIENT && appointment.patientId._id.toString() !== userId) {
-            throw new BadRequestException('Доступ запрещен');
-        }
-
-        if (userRole === UserRole.DOCTOR && appointment.doctorId._id.toString() !== userId) {
-            throw new BadRequestException('Доступ запрещен');
-        }
-
+        this.assertOwnership(appointment, userId, userRole);
         return appointment;
     }
 
-    async update(id: string, userId: string, userRole: UserRole, updateAppointmentDto: UpdateAppointmentDto) {
+    async update(
+        id: string,
+        userId: string,
+        userRole: UserRole,
+        dto: UpdateAppointmentDto,
+    ) {
         const appointment = await this.appointmentModel.findById(id);
-
         if (!appointment) {
             throw new NotFoundException('Запись не найдена');
         }
 
-        if (userRole === UserRole.PATIENT && appointment.patientId.toString() !== userId) {
-            throw new BadRequestException('Доступ запрещен');
-        }
+        this.assertOwnership(appointment, userId, userRole);
 
-        if (userRole === UserRole.DOCTOR && appointment.doctorId.toString() !== userId) {
-            throw new BadRequestException('Доступ запрещен');
-        }
-
-        Object.assign(appointment, updateAppointmentDto);
+        Object.assign(appointment, dto);
         return appointment.save();
     }
 
     async remove(id: string, userId: string, userRole: UserRole) {
         const appointment = await this.appointmentModel.findById(id);
-
         if (!appointment) {
             throw new NotFoundException('Запись не найдена');
         }
 
-        if (userRole === UserRole.PATIENT && appointment.patientId.toString() !== userId) {
-            throw new BadRequestException('Доступ запрещен');
-        }
-
-        if (userRole === UserRole.DOCTOR && appointment.doctorId.toString() !== userId) {
-            throw new BadRequestException('Доступ запрещен');
-        }
-
+        this.assertOwnership(appointment, userId, userRole);
         await this.appointmentModel.findByIdAndDelete(id);
-        return {message: 'Запись успешно удалена'};
+        return { message: 'Запись успешно удалена' };
     }
 
-    async findAvailableDoctors(specialization?: string) {
-        const query: any = {role: UserRole.DOCTOR};
+    findAvailableDoctors(specialization?: string) {
+        const query: Record<string, unknown> = { role: UserRole.DOCTOR };
         if (specialization) {
             query.specialization = specialization;
         }
-
         return this.userModel.find(query).select('firstName lastName specialization').exec();
     }
 
     async findUniquePatientsForDoctor(doctorId: string) {
         const appointments = await this.appointmentModel
-            .find({doctor: doctorId})
-            .populate('patient', '-password')
+            .find({ doctorId: new Types.ObjectId(doctorId) })
+            .populate('patientId', '-password')
             .exec();
 
         const patients = appointments
-            .map((a: any) => a.patient)
-            .filter(p => !!p);
+            .map((a) => a.patientId)
+            .filter((p): p is NonNullable<typeof p> => !!p);
 
-        const uniquePatients = Array.from(
-            new Map(patients.map((p: any) => [p._id.toString(), p])).values()
+        return Array.from(
+            new Map(patients.map((p: any) => [p._id.toString(), p])).values(),
         );
+    }
 
-        return uniquePatients;
+    private assertOwnership(
+        appointment: AppointmentDocument,
+        userId: string,
+        userRole: UserRole,
+    ): void {
+        const patientId = (appointment.patientId as any)?._id ?? appointment.patientId;
+        const doctorId = (appointment.doctorId as any)?._id ?? appointment.doctorId;
+
+        if (userRole === UserRole.PATIENT && patientId.toString() !== userId) {
+            throw new ForbiddenException('Доступ запрещен');
+        }
+        if (userRole === UserRole.DOCTOR && doctorId.toString() !== userId) {
+            throw new ForbiddenException('Доступ запрещен');
+        }
     }
 }
-
-

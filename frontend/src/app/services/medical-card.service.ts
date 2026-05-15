@@ -1,28 +1,28 @@
-import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
-import { MedicalCard } from '../models/medical-card.model';
-import { environment } from '../../environments/environment';
 
-@Injectable({
-  providedIn: 'root'
-})
+import { environment } from '../../environments/environment';
+import { CreateMedicalRecordDto, MedicalCard } from '../models/medical-card.model';
+
+@Injectable({ providedIn: 'root' })
 export class MedicalCardService {
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
+  private readonly api = `${environment.apiUrl}/medical-cards`;
 
   getMyCard(): Observable<MedicalCard> {
-    return this.http.get<MedicalCard>(`${environment.apiUrl}/medical-cards/my`);
+    return this.http.get<MedicalCard>(`${this.api}/my`);
   }
 
   getPatientCard(patientId: string): Observable<MedicalCard> {
-    return this.http.get<MedicalCard>(`${environment.apiUrl}/medical-cards/patient/${patientId}`);
+    return this.http.get<MedicalCard>(`${this.api}/patient/${patientId}`);
   }
 
-  addRecord(data: any): Observable<MedicalCard> {
-    return this.http.post<MedicalCard>(`${environment.apiUrl}/medical-cards/record`, data);
+  addRecord(record: CreateMedicalRecordDto): Observable<MedicalCard> {
+    return this.http.post<MedicalCard>(`${this.api}/record`, record);
   }
 
-  update(data: any): Observable<MedicalCard> {
-    return this.http.patch<MedicalCard>(`${environment.apiUrl}/medical-cards`, data);
+  update(data: Partial<MedicalCard>): Observable<MedicalCard> {
+    return this.http.patch<MedicalCard>(this.api, data);
   }
 }

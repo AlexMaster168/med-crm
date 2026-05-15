@@ -1,14 +1,14 @@
-import {Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query} from '@nestjs/common';
-import {AppointmentsService} from './appointments.service';
-import {CreateAppointmentDto, UpdateAppointmentDto} from '../dto/appointment.dto';
-import {CurrentUser} from '../auth/decorators/current-user.decorator';
-import {Roles} from '../auth/decorators/roles.decorator';
-import {RolesGuard} from '../auth/guards/roles.guard';
-import {JwtAuthGuard} from '../auth/guards/jwt-auth.guard';
-import {UserRole} from '../schemas/user.schema';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { AppointmentsService } from './appointments.service';
+import { CreateAppointmentDto, UpdateAppointmentDto } from '../dto/appointment.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../schemas/user.schema';
 
+@ApiTags('appointments')
+@ApiBearerAuth()
 @Controller('appointments')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class AppointmentsController {
     constructor(private readonly appointmentsService: AppointmentsService) {
     }

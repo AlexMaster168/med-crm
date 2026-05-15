@@ -1,119 +1,119 @@
-import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {BehaviorSubject, Observable, tap} from 'rxjs';
-import {User} from '../models/user.model';
-import {environment} from '../../environments/environment';
+import { HttpClient } from '@angular/common/http';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Observable, tap } from 'rxjs';
+
+import { environment } from '../../environments/environment';
+import { User, UserRole } from '../models/user.model';
 
 interface AuthResponse {
-    accessToken: string;
-    refreshToken: string;
-    role: string;
-    user?: User;
+  accessToken: string;
+  refreshToken: string;
+  role?: UserRole;
+  user?: User;
 }
 
-@Injectable({
-    providedIn: 'root'
-})
+const KEYS = {
+  access: 'accessToken',
+  refresh: 'refreshToken',
+  user: 'user',
+} as const;
+
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-    private currentUserSubject = new BehaviorSubject<User | null>(null);
-    public currentUser$ = this.currentUserSubject.asObservable();
+  private readonly http = inject(HttpClient);
+  private readonly api = `${environment.apiUrl}/auth`;
 
-    constructor(private http: HttpClient) {
-        this.loadUserFromStorage();
+  private readonly _accessToken = signal<string | null>(this.read(KEYS.access));
+  private readonly _user = signal<User | null>(this.readUser());
+
+  readonly user = this._user.asReadonly();
+  readonly accessToken = this._accessToken.asReadonly();
+  readonly isLoggedIn = computed(() => this._accessToken() !== null);
+  readonly role = computed<UserRole | null>(() => this._user()?.role ?? null);
+
+  isAuthenticated(): boolean {
+    return this._accessToken() !== null;
+  }
+
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.api}/login`, { email, password })
+      .pipe(tap((res) => this.persist(res)));
+  }
+
+  register(data: Record<string, unknown>): Observable<AuthResponse> {
+    return this.http
+      .post<AuthResponse>(`${this.api}/register`, data)
+      .pipe(tap((res) => this.persist(res)));
+  }
+
+  forgotPassword(email: string): Observable<unknown> {
+    return this.http.post(`${this.api}/forgot-password`, { email });
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<unknown> {
+    return this.http.post(`${this.api}/reset-password`, { token, newPassword });
+  }
+
+  logout(): Observable<unknown> {
+    const req = this.http.post(`${this.api}/logout`, {});
+    this.clearSession();
+    return req;
+  }
+
+  clearSession(): void {
+    localStorage.removeItem(KEYS.access);
+    localStorage.removeItem(KEYS.refresh);
+    localStorage.removeItem(KEYS.user);
+    this._accessToken.set(null);
+    this._user.set(null);
+  }
+
+  updateUser(partial: Partial<User>): void {
+    const current = this._user();
+    if (!current) return;
+    const next = { ...current, ...partial };
+    this._user.set(next);
+    localStorage.setItem(KEYS.user, JSON.stringify(next));
+  }
+
+  private persist(res: AuthResponse): void {
+    localStorage.setItem(KEYS.access, res.accessToken);
+    if (res.refreshToken) localStorage.setItem(KEYS.refresh, res.refreshToken);
+
+    const user: User =
+      res.user ??
+      ({
+        id: '',
+        email: '',
+        firstName: '',
+        lastName: '',
+        role: (res.role ?? UserRole.PATIENT) as UserRole,
+      } as User);
+
+    if (!user.role && res.role) user.role = res.role;
+
+    localStorage.setItem(KEYS.user, JSON.stringify(user));
+    this._accessToken.set(res.accessToken);
+    this._user.set(user);
+  }
+
+  private read(key: string): string | null {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
     }
+  }
 
-    private loadUserFromStorage(): void {
-        const userJson = localStorage.getItem('user');
-        try {
-            if (userJson && userJson !== 'undefined') {
-                const user = JSON.parse(userJson);
-                this.currentUserSubject.next(user);
-            }
-        } catch (e) {
-            console.error('Error parsing user from storage', e);
-            localStorage.removeItem('user');
-        }
+  private readUser(): User | null {
+    const raw = this.read(KEYS.user);
+    if (!raw || raw === 'undefined') return null;
+    try {
+      return JSON.parse(raw) as User;
+    } catch {
+      localStorage.removeItem(KEYS.user);
+      return null;
     }
-
-
-    isAuthenticated(): boolean {
-        const token = localStorage.getItem('accessToken');
-        return !!token;
-    }
-
-
-    getUserRole(): string | null {
-        const user = this.currentUserSubject.value;
-        if (user && user.role) {
-            return user.role;
-        }
-
-        const userJson = localStorage.getItem('user');
-        if (userJson) {
-            try {
-                const storedUser = JSON.parse(userJson);
-                return storedUser.role || null;
-            } catch {
-                return null;
-            }
-        }
-        return null;
-    }
-
-    register(data: any): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/register`, data)
-            .pipe(tap(response => this.handleAuth(response)));
-    }
-
-    login(email: string, password: string): Observable<AuthResponse> {
-        return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/login`, {email, password})
-            .pipe(tap(response => this.handleAuth(response)));
-    }
-
-    logout(): void {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        this.currentUserSubject.next(null);
-        this.http.post(`${environment.apiUrl}/auth/logout`, {}).subscribe({
-            error: () => {
-            }
-        });
-    }
-
-    getAccessToken(): string | null {
-        return localStorage.getItem('accessToken');
-    }
-
-    getCurrentUser(): User | null {
-        return this.currentUserSubject.value;
-    }
-
-    private handleAuth(response: AuthResponse): void {
-        localStorage.setItem('accessToken', response.accessToken);
-        localStorage.setItem('refreshToken', response.refreshToken);
-
-        const userAccount = response.user || {
-            email: '',
-            role: response.role,
-            id: '',
-            firstName: '',
-            lastName: ''
-        } as User;
-
-        if (!userAccount.role && response.role) {
-            userAccount.role = response.role as any;
-        }
-
-        localStorage.setItem('user', JSON.stringify(userAccount));
-        this.currentUserSubject.next(userAccount);
-    }
-
-    forgotPassword(email: string): Observable<any> {
-        return this.http.post(`${environment.apiUrl}/auth/forgot-password`, { email });
-    }
-
-    resetPassword(token: string, newPassword: string): Observable<any> {
-        return this.http.post(`${environment.apiUrl}/auth/reset-password`, { token, newPassword });
-    }
+  }
 }

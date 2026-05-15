@@ -1,37 +1,23 @@
-import {Injectable} from '@angular/core';
-import {HttpClient} from '@angular/common/http';
-import {Observable} from 'rxjs';
-import {User, DoctorSpecialization} from '../models/user.model';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable } from 'rxjs';
 
-@Injectable({
-    providedIn: 'root'
-})
+import { environment } from '../../environments/environment';
+import { User } from '../models/user.model';
+
+@Injectable({ providedIn: 'root' })
 export class UserService {
-    private apiUrl = 'http://localhost:3000';
+  private readonly http = inject(HttpClient);
+  private readonly base = environment.apiUrl;
 
-    constructor(private http: HttpClient) {
-    }
+  /** Reuse the appointments endpoint so the list always reflects bookable doctors. */
+  getDoctors(specialization?: string): Observable<User[]> {
+    let params = new HttpParams();
+    if (specialization) params = params.set('specialization', specialization);
+    return this.http.get<User[]>(`${this.base}/appointments/doctors`, { params });
+  }
 
-    getProfile(): Observable<User> {
-        return this.http.get<User>(`${this.apiUrl}/users/profile`);
-    }
-
-    getDoctors(specialty?: DoctorSpecialization): Observable<User[]> {
-        const url = specialty
-            ? `${this.apiUrl}/doctors?specialty=${specialty}`
-            : `${this.apiUrl}/doctors`;
-        return this.http.get<User[]>(url);
-    }
-
-    getDoctorById(id: string): Observable<User> {
-        return this.http.get<User>(`${this.apiUrl}/doctors/${id}`);
-    }
-
-    getMyPatients(): Observable<any> {
-        return this.http.get(`${this.apiUrl}/appointments/patients`);
-    }
-
-    assignFamilyDoctor(doctorId: string): Observable<User> {
-        return this.http.post<User>(`${this.apiUrl}/assign-family-doctor`, {doctorId});
-    }
+  getMyPatients(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.base}/appointments/patients`);
+  }
 }

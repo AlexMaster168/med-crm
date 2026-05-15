@@ -1,18 +1,18 @@
-import { Controller, Get, Post, Delete, Body, UseGuards, Param } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiProperty, ApiTags } from '@nestjs/swagger';
+import { IsMongoId } from 'class-validator';
 import { FamilyDoctorsService } from './family-doctors.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../schemas/user.schema';
-import { IsMongoId } from 'class-validator';
 
 class CreateContractDto {
-  @IsMongoId()
-  doctorId: string;
+  @ApiProperty() @IsMongoId() doctorId: string;
 }
 
+@ApiTags('family-doctors')
+@ApiBearerAuth()
 @Controller('family-doctors')
-@UseGuards(RolesGuard)
 export class FamilyDoctorsController {
   constructor(private readonly familyDoctorsService: FamilyDoctorsService) {}
 

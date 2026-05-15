@@ -1,13 +1,14 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MedicalCardsService } from './medical-cards.service';
 import { CreateMedicalRecordDto, UpdateMedicalCardDto } from '../dto/medical-card.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { RolesGuard } from '../auth/guards/roles.guard';
 import { UserRole } from '../schemas/user.schema';
 
+@ApiTags('medical-cards')
+@ApiBearerAuth()
 @Controller('medical-cards')
-@UseGuards(RolesGuard)
 export class MedicalCardsController {
   constructor(private readonly medicalCardsService: MedicalCardsService) {}
 
