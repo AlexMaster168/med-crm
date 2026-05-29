@@ -5,6 +5,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   Appointment,
+  CompleteAppointmentPayload,
   CreateAppointmentRequest,
   TimeSlot,
 } from '../models/appointment.model';
@@ -45,6 +46,18 @@ export class AppointmentService {
 
   update(id: string, patch: Partial<Appointment>): Observable<Appointment> {
     return this.http.patch<Appointment>(`${this.api}/${id}`, patch);
+  }
+
+  confirm(id: string): Observable<Appointment> {
+    return this.http.patch<Appointment>(`${this.api}/${id}/confirm`, {});
+  }
+
+  reject(id: string): Observable<Appointment> {
+    return this.http.patch<Appointment>(`${this.api}/${id}/reject`, {});
+  }
+
+  complete(id: string, record: CompleteAppointmentPayload): Observable<Appointment> {
+    return this.http.patch<Appointment>(`${this.api}/${id}/complete`, record);
   }
 
   cancel(id: string): Observable<unknown> {

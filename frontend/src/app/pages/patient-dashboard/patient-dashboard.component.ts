@@ -6,6 +6,8 @@ import { AppointmentService } from '../../services/appointment.service';
 import { AuthService } from '../../services/auth.service';
 import { FamilyDoctorService } from '../../services/family-doctor.service';
 import { UserService } from '../../services/user.service';
+import { MedicalCardService } from '../../services/medical-card.service';
+import { MedicalCard } from '../../models/medical-card.model';
 import {
   Appointment,
   AppointmentStatus,
@@ -165,6 +167,10 @@ const SPECS = [
                     }
                   </div>
                 </div>
+              } @else if (slotsChecked() && bookingForm.controls.date.value) {
+                <div class="alert alert-info">
+                  В этот день врач не принимает или все слоты заняты. Выберите другую дату.
+                </div>
               }
 
               <div class="field">
@@ -247,6 +253,60 @@ const SPECS = [
               <div class="empty-icon">📅</div>
               <div>У вас пока нет записей</div>
             </div>
+          }
+        </div>
+      </section>
+
+      <section class="card">
+        <header class="card-header">
+          <div>
+            <div class="card-title">Моя медкарта</div>
+            <div class="card-subtle">Показатели и история болезни</div>
+          </div>
+        </header>
+        <div class="card-body">
+          @if (myCard(); as c) {
+            <div class="vitals">
+              <div class="vital"><span class="muted">Группа крови</span><b>{{ c.bloodType || '—' }}</b></div>
+              <div class="vital"><span class="muted">Рост</span><b>{{ c.height ? c.height + ' см' : '—' }}</b></div>
+              <div class="vital"><span class="muted">Вес</span><b>{{ c.weight ? c.weight + ' кг' : '—' }}</b></div>
+            </div>
+
+            <div class="chips-block">
+              <div class="chips-label">Аллергии</div>
+              @if (c.allergies?.length) {
+                <div class="chips">@for (a of c.allergies; track a) { <span class="chip chip-danger">{{ a }}</span> }</div>
+              } @else { <span class="muted">нет</span> }
+            </div>
+            <div class="chips-block">
+              <div class="chips-label">Хронические заболевания</div>
+              @if (c.chronicDiseases?.length) {
+                <div class="chips">@for (d of c.chronicDiseases; track d) { <span class="chip">{{ d }}</span> }</div>
+              } @else { <span class="muted">нет</span> }
+            </div>
+
+            <div class="chips-label">История болезни ({{ c.records.length }})</div>
+            @if (c.records.length) {
+              <div class="records">
+                @for (r of sortedRecords(c.records); track $index) {
+                  <article class="record">
+                    <div class="record-head">
+                      <span class="record-diag">{{ r.diagnosis }}</span>
+                      <span class="muted">{{ r.date | date: 'dd.MM.yyyy' }}</span>
+                    </div>
+                    <div class="record-row"><span class="muted">Симптомы:</span> {{ r.symptoms }}</div>
+                    @if (r.treatment) {
+                      <div class="record-row"><span class="muted">Лечение:</span> {{ r.treatment }}</div>
+                    }
+                    @if (recordDoctor(r); as rd) { <div class="record-doc muted">— {{ rd }}</div> }
+                  </article>
+                }
+              </div>
+            } @else {
+              <div class="empty"><div class="empty-icon">📋</div><div>Записей пока нет</div></div>
+            }
+          } @else {
+            <div class="empty"><div class="empty-icon">📋</div><div>Карта загружается…</div></div>
           }
         </div>
       </section>
@@ -336,6 +396,29 @@ const SPECS = [
       .appt-title { font-weight: 600; font-size: 15px; }
       .appt-reason { color: var(--text-secondary); margin-top: 4px; font-size: 13px; }
       .appt-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
+
+      /* ── Медкарта ── */
+      .vitals {
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3);
+        margin-bottom: var(--space-4);
+      }
+      .vital {
+        display: flex; flex-direction: column; gap: 2px;
+        padding: var(--space-3); background: var(--surface-muted); border-radius: var(--radius);
+      }
+      .vital span { font-size: 12px; }
+      .vital b { font-size: 16px; }
+      .chips-block { margin-bottom: var(--space-4); }
+      .chips-label { font-weight: 600; font-size: 13px; margin-bottom: var(--space-2); }
+      .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+      .chip { padding: 2px 10px; border-radius: var(--radius-full); background: var(--surface-sunken); font-size: 12px; }
+      .chip-danger { background: #fee2e2; color: #b91c1c; }
+      .records { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-2); }
+      .record { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); }
+      .record-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-2); }
+      .record-diag { font-weight: 600; }
+      .record-row { font-size: 13px; margin-top: 2px; }
+      .record-doc { font-size: 12px; margin-top: var(--space-2); text-align: right; }
     `,
   ],
 })
@@ -345,6 +428,7 @@ export class PatientDashboardComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly appointmentService = inject(AppointmentService);
   private readonly familyDoctorService = inject(FamilyDoctorService);
+  private readonly medicalCardService = inject(MedicalCardService);
 
   protected readonly AppointmentStatus = AppointmentStatus;
   protected readonly statusLabels = APPOINTMENT_STATUS_LABELS;
@@ -357,6 +441,7 @@ export class PatientDashboardComponent implements OnInit {
   protected readonly doctorsList = signal<User[]>([]);
   protected readonly availableSlots = signal<TimeSlot[]>([]);
   protected readonly familyDoctor = signal<User | null>(null);
+  protected readonly myCard = signal<MedicalCard | null>(null);
   protected readonly loading = signal(true);
   protected readonly bookingLoading = signal(false);
   protected readonly bookingError = signal('');
@@ -378,8 +463,11 @@ export class PatientDashboardComponent implements OnInit {
     doctorId: ['', Validators.required],
     date: ['', Validators.required],
     time: ['', Validators.required],
-    reason: [''],
+    reason: ['', [Validators.required, Validators.maxLength(500)]],
   });
+
+  // true после ответа сервера по слотам — чтобы отличить «дата не выбрана» от «слотов нет»
+  protected readonly slotsChecked = signal(false);
 
   protected readonly minDate = new Date().toISOString().slice(0, 10);
 
@@ -387,6 +475,26 @@ export class PatientDashboardComponent implements OnInit {
     this.loadAppointments();
     this.loadTherapists();
     this.loadFamilyDoctor();
+    this.loadCard();
+  }
+
+  protected sortedRecords(records: MedicalCard['records']) {
+    return [...records].sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  }
+
+  protected recordDoctor(r: MedicalCard['records'][number]): string {
+    const d = r.doctorId;
+    if (d && typeof d === 'object') {
+      return `${d.firstName ?? ''} ${d.lastName ?? ''}`.trim();
+    }
+    return '';
+  }
+
+  private loadCard(): void {
+    this.medicalCardService.getMyCard().subscribe({
+      next: (c) => this.myCard.set(c),
+      error: () => this.myCard.set(null),
+    });
   }
 
   protected initials(user: User | null | undefined): string {
@@ -400,6 +508,8 @@ export class PatientDashboardComponent implements OnInit {
 
   protected statusBadgeClass(status: AppointmentStatus): string {
     switch (status) {
+      case AppointmentStatus.PENDING:
+        return 'badge-warn';
       case AppointmentStatus.SCHEDULED:
         return 'badge-info';
       case AppointmentStatus.COMPLETED:
@@ -413,6 +523,7 @@ export class PatientDashboardComponent implements OnInit {
     const spec = this.bookingForm.controls.specialization.value;
     this.bookingForm.patchValue({ doctorId: '', date: '', time: '' });
     this.availableSlots.set([]);
+    this.slotsChecked.set(false);
     if (!spec) {
       this.doctorsList.set([]);
       return;
@@ -426,19 +537,27 @@ export class PatientDashboardComponent implements OnInit {
   protected onDoctorChange(): void {
     this.bookingForm.patchValue({ date: '', time: '' });
     this.availableSlots.set([]);
+    this.slotsChecked.set(false);
   }
 
   protected onDateChange(): void {
     const doctorId = this.bookingForm.controls.doctorId.value;
     const date = this.bookingForm.controls.date.value;
     this.bookingForm.patchValue({ time: '' });
+    this.slotsChecked.set(false);
     if (!doctorId || !date) {
       this.availableSlots.set([]);
       return;
     }
     this.appointmentService.getAvailableSlots(doctorId, date).subscribe({
-      next: (slots) => this.availableSlots.set(slots),
-      error: () => this.availableSlots.set([]),
+      next: (slots) => {
+        this.availableSlots.set(slots);
+        this.slotsChecked.set(true);
+      },
+      error: () => {
+        this.availableSlots.set([]);
+        this.slotsChecked.set(true);
+      },
     });
   }
 
@@ -470,6 +589,7 @@ export class PatientDashboardComponent implements OnInit {
           });
           this.doctorsList.set([]);
           this.availableSlots.set([]);
+          this.slotsChecked.set(false);
           this.loadAppointments();
         },
         error: (err) => {

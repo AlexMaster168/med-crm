@@ -2,70 +2,60 @@
 
 ## Требования
 
-- Node.js 18+ и npm
+- Node.js 20.11+
+- pnpm 10 (`npm install -g pnpm@10`)
 - MongoDB 5.0+
-- Angular CLI (`npm install -g @angular/cli`)
-- NestJS CLI (`npm install -g @nestjs/cli`)
 
-## Установка
+> Глобальные Angular/NestJS CLI ставить не нужно — они подтягиваются как зависимости проекта.
 
-### 1. Распаковка проекта
+## Установка (Windows)
 
-```bash
-tar -xzf medical-crm.tar.gz
-cd medical-crm
+### 1. MongoDB
+
+```powershell
+winget install MongoDB.Server
 ```
 
-### 2. Backend (NestJS)
+Ставится как служба `MongoDB`, слушает `localhost:27017`, автозапуск при старте системы.
+Проверка: `Get-Service MongoDB` → должно быть `Running`.
 
-```bash
-cd backend
-npm install
+### 2. Зависимости проекта
+
+Из корня репозитория:
+```powershell
+pnpm install:all   # корень + backend + frontend за один заход
 ```
 
-Настройте файл `.env`:
-```
-MONGODB_URI=mongodb://localhost:27017/medical-crm
-JWT_ACCESS_SECRET=ваш-секретный-ключ-доступа
-JWT_REFRESH_SECRET=ваш-секретный-ключ-обновления
-JWT_ACCESS_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=ваш-email@gmail.com
-SMTP_PASSWORD=пароль-приложения-gmail
-SMTP_FROM=Medical CRM <noreply@medicalcrm.com>
-PORT=3000
-FRONTEND_URL=http://localhost:4200
+### 3. Конфигурация (опционально)
+
+Все переменные имеют дефолты, поэтому для локалки `.env` не обязателен. Если нужно переопределить (свои JWT-секреты, SMTP и т.д.):
+
+```powershell
+Copy-Item backend\.env.example backend\.env
 ```
 
-**Важно для SMTP:**
-- Используйте пароль приложения Gmail (не основной пароль)
-- Создайте пароль приложения в настройках безопасности Google
+Все доступные переменные с пояснениями — в [backend/.env.example](backend/.env.example).
 
-Загрузите тестовые данные:
-```bash
-npm run seed
+**Важно для SMTP:** используйте пароль приложения Gmail (не основной пароль аккаунта). Если SMTP не задан — отправка писем просто отключается.
+
+### 4. Тестовые данные
+
+```powershell
+pnpm --dir backend run seed
 ```
 
-Запустите сервер:
-```bash
-npm run start:dev
+### 5. Запуск — одной командой
+
+```powershell
+pnpm dev
 ```
 
-### 3. Frontend (Angular)
-
-```bash
-cd ../frontend
-npm install
-ng serve
-```
-
-Приложение будет доступно по адресу: `http://localhost:4200`
+Поднимает бэк (`:3000`) и фронт (`:4200`) параллельно. Браузер откроется сам.
+Приложение: `http://localhost:4200`
 
 ## Тестовые учетные записи
 
-После выполнения `npm run seed` будут созданы:
+После выполнения `pnpm --dir backend run seed` будут созданы:
 
 **Врачи:**
 - Email: `petrov@hospital.com` | Пароль: `password123` | Роль: Терапевт
@@ -127,62 +117,58 @@ ng serve
 
 ## Troubleshooting
 
-### MongoDB не запускается
-```bash
-sudo systemctl start mongodb
-sudo systemctl status mongodb
+### `ERR_CONNECTION_REFUSED` на `:3000` / бэк молча не стартует
+Почти всегда — не запущена MongoDB (бэк не может подключиться к базе и падает на старте). Проверьте и запустите службу:
+```powershell
+Get-Service MongoDB      # ожидаем Status: Running
+Start-Service MongoDB    # если остановлена
 ```
 
 ### Ошибка CORS
-Убедитесь что в `main.ts` backend включен CORS:
-```typescript
-app.enableCors();
-```
+CORS включён в [backend/src/main.ts](backend/src/main.ts) и берёт источники из `CORS_ORIGIN` (по умолчанию `http://localhost:4200`). Если фронт на другом адресе — пропишите его в `backend/.env`.
 
 ### Ошибка SMTP
-- Проверьте пароль приложения Gmail
-- Включите "Небезопасные приложения" в настройках Gmail
-- Используйте пароль приложения вместо основного пароля
+- Используйте пароль приложения Gmail вместо основного пароля
+- Если SMTP не настроен — это не ошибка, отправка писем просто отключается
 
 ### Порты заняты
-- Backend по умолчанию на порту 3000
-- Frontend по умолчанию на порту 4200
-- Измените порты в конфигурационных файлах при необходимости
+- Backend по умолчанию на порту 3000 — меняется через `PORT` в `backend/.env`
+- Frontend по умолчанию на порту 4200 — меняется флагом `--port` в скрипте `start` ([frontend/package.json](frontend/package.json))
 
 ## Разработка
 
-### Backend
-```bash
-cd backend
-npm run start:dev
+### Запуск фронта и бэка вместе
+```powershell
+pnpm dev   # из корня репозитория
 ```
 
-### Frontend
-```bash
-cd frontend
-ng serve --open
+### По отдельности
+```powershell
+pnpm --dir backend run start:dev   # бэк (watch)
+pnpm --dir frontend run start      # фронт
 ```
 
 ### База данных
 Сброс и пересоздание тестовых данных:
-```bash
-cd backend
-npm run seed
+```powershell
+pnpm --dir backend run seed
 ```
 
 ## Production
 
+### Сборка обоих проектов
+```powershell
+pnpm build   # из корня, собирает backend и frontend параллельно
+```
+
 ### Backend
-```bash
-cd backend
-npm run build
-node dist/main
+```powershell
+pnpm --dir backend run start:prod   # node dist/main.js
 ```
 
 ### Frontend
-```bash
-cd frontend
-ng build --configuration production
+```powershell
+pnpm --dir frontend run build:prod
 ```
 
-Скомпилированные файлы будут в `frontend/dist/medical-crm/`
+Скомпилированные файлы фронта будут в `frontend/dist/`

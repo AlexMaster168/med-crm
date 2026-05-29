@@ -7,6 +7,7 @@ import { User, UserRole, DoctorSpecialization } from '../schemas/user.schema';
 import { Appointment, AppointmentStatus } from '../schemas/appointment.schema';
 import { MedicalCard } from '../schemas/medical-card.schema';
 import { FamilyDoctor } from '../schemas/family-doctor.schema';
+import { DoctorSchedule, defaultWorkingDays } from '../schemas/doctor-schedule.schema';
 
 async function seed() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -15,11 +16,13 @@ async function seed() {
   const appointmentModel = app.get<Model<Appointment>>(getModelToken('Appointment'));
   const medicalCardModel = app.get<Model<MedicalCard>>(getModelToken('MedicalCard'));
   const familyDoctorModel = app.get<Model<FamilyDoctor>>(getModelToken('FamilyDoctor'));
+  const scheduleModel = app.get<Model<DoctorSchedule>>(getModelToken('DoctorSchedule'));
 
   await userModel.deleteMany({});
   await appointmentModel.deleteMany({});
   await medicalCardModel.deleteMany({});
   await familyDoctorModel.deleteMany({});
+  await scheduleModel.deleteMany({});
 
   const hashedPassword = await bcrypt.hash('password123', 10);
 
@@ -141,6 +144,46 @@ async function seed() {
   }
 
   await appointmentModel.insertMany(appointments);
+
+  // Дефолтный график приёма каждому врачу (Пн–Пт 09:00–17:00, перерыв 13:00–14:00)
+  for (const doctor of doctors) {
+    await scheduleModel.create({
+      doctorId: doctor._id,
+      workingDays: defaultWorkingDays(),
+      slotDurationMin: 30,
+      breakStart: '13:00',
+      breakEnd: '14:00',
+      daysOff: [],
+      bookingHorizonDays: 30,
+      minLeadTimeHours: 2,
+      maxActivePerPatient: 1,
+      requiresConfirmation: true,
+    });
+  }
+
+  // Пара заявок в ожидании подтверждения — терапевту Петрову (для демонстрации)
+  const pendingDate = new Date(now);
+  pendingDate.setDate(pendingDate.getDate() + 2);
+  pendingDate.setHours(10, 0, 0, 0);
+  const pendingDate2 = new Date(now);
+  pendingDate2.setDate(pendingDate2.getDate() + 3);
+  pendingDate2.setHours(14, 30, 0, 0);
+  await appointmentModel.insertMany([
+    {
+      patientId: patients[1]._id,
+      doctorId: doctors[0]._id,
+      dateTime: pendingDate,
+      status: AppointmentStatus.PENDING,
+      reason: 'Хочу обсудить результаты анализов',
+    },
+    {
+      patientId: patients[2]._id,
+      doctorId: doctors[0]._id,
+      dateTime: pendingDate2,
+      status: AppointmentStatus.PENDING,
+      reason: 'Постоянная усталость и слабость',
+    },
+  ]);
 
   for (const patient of patients) {
     await medicalCardModel.create({

@@ -5,6 +5,8 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AuthModule } from './auth/auth.module';
 import { AppointmentsModule } from './appointments/appointments.module';
+import { DoctorSchedulesModule } from './doctor-schedules/doctor-schedules.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { MedicalCardsModule } from './medical-cards/medical-cards.module';
 import { FamilyDoctorsModule } from './family-doctors/family-doctors.module';
 import { MailModule } from './mail/mail.module';
@@ -42,6 +44,7 @@ import { envValidationSchema } from './config/env.validation';
         }),
         AuthModule,
         AppointmentsModule,
+        DoctorSchedulesModule,
         MedicalCardsModule,
         FamilyDoctorsModule,
         MailModule,

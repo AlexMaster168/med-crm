@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 
 import { AuthService } from '../../services/auth.service';
 import { SPECIALIZATION_LABELS, UserRole } from '../../models/user.model';
+import { NotificationBellComponent } from '../../components/notification-bell.component';
 
 interface NavItem {
   label: string;
@@ -12,7 +13,7 @@ interface NavItem {
 
 @Component({
   selector: 'app-app-layout',
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, NotificationBellComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="shell" [class.sidebar-open]="sidebarOpen()">
@@ -62,6 +63,7 @@ interface NavItem {
           </button>
           <div class="topbar-title">{{ greeting() }}</div>
           <div class="spacer"></div>
+          <app-notification-bell />
           <span class="badge badge-brand">{{ roleLabel() }}</span>
         </header>
 

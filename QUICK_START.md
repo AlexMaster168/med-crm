@@ -1,50 +1,44 @@
 # Быстрый старт Medical CRM
 
-## Минимальная установка
+## Минимальная установка (Windows)
 
-### 1. Установите зависимости (один раз)
+### 1. Поставьте зависимости (один раз)
 
-```bash
-# Глобальные инструменты
-npm install -g @nestjs/cli @angular/cli
+```powershell
+# Node.js 20.11+ и pnpm 10 (если ещё не стоят)
+winget install OpenJS.NodeJS.LTS
+npm install -g pnpm@10
 
-# Убедитесь что MongoDB запущена
-sudo systemctl start mongodb
+# MongoDB как служба Windows (поднимается автоматически при старте системы)
+winget install MongoDB.Server
 ```
 
-### 2. Распакуйте и установите проект
+> MongoDB после установки работает как служба `MongoDB` и слушает `localhost:27017`.
+> Проверить: `Get-Service MongoDB` — должно быть `Running`.
 
-```bash
-tar -xzf medical-crm.tar.gz
-cd medical-crm
+### 2. Установите проект
 
-# Backend
-cd backend
-npm install
-npm run seed
+```powershell
+# из корня репозитория
+pnpm install:all   # ставит зависимости в корне, backend и frontend
 
-# В новом терминале - Frontend
-cd ../frontend
-npm install
+# наполнить базу тестовыми данными
+pnpm --dir backend run seed
 ```
 
-### 3. Запустите приложение
+### 3. Запустите приложение — одной командой
 
-```bash
-# Терминал 1 - Backend
-cd backend
-npm run start:dev
-
-# Терминал 2 - Frontend
-cd frontend
-ng serve
+```powershell
+pnpm dev
 ```
+
+Поднимает бэк (NestJS, `:3000`) и фронт (Angular, `:4200`) параллельно, логи раскрашены по префиксам `BACK` / `FRONT`. Браузер откроется сам.
 
 ### 4. Откройте браузер
 
 `http://localhost:4200`
 
-**Тестовые учетные данные:**
+**Тестовые учётные данные:**
 - Врач: `petrov@hospital.com` / `password123`
 - Пациент: `ivanova@mail.com` / `password123`
 
@@ -52,14 +46,14 @@ ng serve
 
 ### Пациент может:
 ✅ Просматривать доступных врачей по специализации
-✅ Записываться на прием к врачу
+✅ Записываться на приём к врачу
 ✅ Просматривать свою медицинскую карту
 ✅ Заключить договор с терапевтом (семейный врач)
 ✅ Отменять записи
 
 ### Врач может:
-✅ Просматривать записи пациентов на прием
-✅ Завершать приемы
+✅ Просматривать записи пациентов на приём
+✅ Завершать приёмы
 ✅ Просматривать медкарты пациентов
 ✅ Добавлять записи в медкарты (симптомы, диагноз, лечение)
 ✅ Просматривать список своих пациентов (для терапевтов)
@@ -67,30 +61,29 @@ ng serve
 ## Особенности
 
 - **JWT аутентификация** с access и refresh токенами
-- **Восстановление пароля** через SMTP (настройте в .env)
+- **Восстановление пароля** через SMTP (настройте в `.env`, см. `backend/.env.example`)
 - **Роли**: Пациент и Врач с разными правами доступа
 - **Специализации врачей**: Хирург, Терапевт, Кардиолог, Невролог и др.
-- **Автоматическая загрузка тестовых данных**: 10 записей при первом запуске
+- **Тестовые данные**: 3 врача, 7 пациентов, 10 записей (через `seed`)
 
 ## Технологии
 
 **Backend:**
-- NestJS (Node.js framework)
-- MongoDB (база данных)
+- NestJS 11 (Node.js framework)
+- MongoDB 5.0+ (база данных)
 - JWT (аутентификация)
 - Nodemailer (email отправка)
 - bcrypt (хеширование паролей)
 
 **Frontend:**
-- Angular 17
+- Angular 19
 - TypeScript
 - RxJS
 - HttpClient
 
 ## Проблемы?
 
-1. **MongoDB не запускается**: `sudo systemctl start mongodb`
-2. **Порт занят**: измените PORT в backend/.env
-3. **SMTP ошибка**: используйте пароль приложения Gmail
-4. **Нужно пересоздать данные**: `cd backend && npm run seed`
-
+1. **`ERR_CONNECTION_REFUSED` на `:3000` / бэк не стартует**: почти всегда не запущена MongoDB. Проверь `Get-Service MongoDB`, запусти `Start-Service MongoDB`.
+2. **Порт занят**: измени `PORT` в `backend/.env` (фронт — флаг `--port` в `frontend` → `package.json`).
+3. **SMTP ошибка**: используй пароль приложения Gmail (см. `backend/.env.example`).
+4. **Нужно пересоздать данные**: `pnpm --dir backend run seed`.

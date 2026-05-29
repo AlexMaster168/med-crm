@@ -16,6 +16,13 @@ export class CreateAppointmentDto {
     @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(500) reason: string;
 }
 
+export class CompleteAppointmentDto {
+    @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(2000) symptoms: string;
+    @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(2000) diagnosis: string;
+    @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(2000) treatment?: string;
+    @ApiPropertyOptional() @IsString() @IsOptional() @MaxLength(2000) notes?: string;
+}
+
 export class UpdateAppointmentDto {
     @ApiPropertyOptional({ enum: AppointmentStatus })
     @IsEnum(AppointmentStatus)

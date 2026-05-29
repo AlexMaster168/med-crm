@@ -1,7 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
-import { CreateAppointmentDto, UpdateAppointmentDto } from '../dto/appointment.dto';
+import {
+    CompleteAppointmentDto,
+    CreateAppointmentDto,
+    UpdateAppointmentDto,
+} from '../dto/appointment.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../schemas/user.schema';
@@ -44,7 +48,29 @@ export class AppointmentsController {
 
     @Get('slots')
     getAvailableSlots(@Query('doctorId') doctorId: string, @Query('date') date: string) {
-        return [];
+        return this.appointmentsService.getAvailableSlots(doctorId, date);
+    }
+
+    @Patch(':id/confirm')
+    @Roles(UserRole.DOCTOR)
+    confirm(@Param('id') id: string, @CurrentUser() user: any) {
+        return this.appointmentsService.confirm(id, user.userId);
+    }
+
+    @Patch(':id/reject')
+    @Roles(UserRole.DOCTOR)
+    reject(@Param('id') id: string, @CurrentUser() user: any) {
+        return this.appointmentsService.reject(id, user.userId);
+    }
+
+    @Patch(':id/complete')
+    @Roles(UserRole.DOCTOR)
+    complete(
+        @Param('id') id: string,
+        @CurrentUser() user: any,
+        @Body() dto: CompleteAppointmentDto,
+    ) {
+        return this.appointmentsService.complete(id, user.userId, dto);
     }
 
     @Get(':id')

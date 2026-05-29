@@ -1,0 +1,18 @@
+{
+  "name": "medical-crm",
+  "version": "2.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.0.0",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "concurrently --names \"BACK,FRONT\" --prefix-colors \"cyan,magenta\" --kill-others-on-fail \"pnpm --dir backend run start:dev\" \"pnpm --dir frontend run start\"",
+    "start": "npm run dev",
+    "build": "concurrently --names \"BACK,FRONT\" --prefix-colors \"cyan,magenta\" \"pnpm --dir backend run build\" \"pnpm --dir frontend run build\"",
+    "install:all": "pnpm install && pnpm --dir backend install && pnpm --dir frontend install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
